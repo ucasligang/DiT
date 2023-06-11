@@ -143,6 +143,29 @@ def main(args):
         input_size=latent_size,
         num_classes=args.num_classes
     )
+    
+    # Updated by Gang Li.
+    if args.resume:
+        state_dict = find_model(args.resume)
+        state_dict.pop('y_embedder.embedding_table.weight', None)
+        model.load_state_dict(state_dict, strict=False)
+    
+    for name, param in model.named_parameters():
+        # cpass
+        if 'y_embedder.embedding_table.weight' in name:
+            continue
+        if ('bias' not in name) and ('norm' not in name):
+        #        and ('attn' not in name) and ('final_layer' not in name):
+        #if ('lora' not in name) and ('bias' not in name) and ('norm' not in name) and ('gamma' not in name) and ('y_embedder.embedding_table.weight' not in name):
+            param.requires_grad = False
+    
+
+    for name, param in model.named_parameters():
+        #if 'y_embedder.embedding_table' in name:
+        logger.info(name)
+        logger.info(param.requires_grad)
+    
+    
     # Note that parameter initialization is done within the DiT constructor
     ema = deepcopy(model).to(device)  # Create an EMA of the model for use after training
     requires_grad(ema, False)
@@ -253,6 +276,8 @@ def main(args):
 if __name__ == "__main__":
     # Default args here will train DiT-XL/2 with the hyperparameters we used in our paper (except training iters).
     parser = argparse.ArgumentParser()
+    # Gang Li.
+    parser.add_argument("--resume", type=str, default='/pub/data/ligang/projects/DiT/pretrained_models/DiT-XL-2-256x256.pt')
     parser.add_argument("--data-path", type=str, required=True)
     parser.add_argument("--results-dir", type=str, default="results")
     parser.add_argument("--model", type=str, choices=list(DiT_models.keys()), default="DiT-XL/2")
